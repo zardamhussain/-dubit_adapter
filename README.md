@@ -3,6 +3,23 @@
 ### Introduction
 The **Dubit Flutter Adapter** makes it easy to integrate Dubit video calls into your Flutter app. Here's a clean and functional example to get you started. Follow the steps below to implement the adapter in your project.
 
+
+### Add the Dependency
+In your pubspec.yaml file, include the dependency for the Dubit Adapter:
+
+```
+yaml
+Copy code
+dependencies:
+  dubit_flutter_adapter:
+    git:
+      url: https://github.com/zardamhussain/dubit_adapter
+      ref: main
+```
+Run flutter pub get to fetch the dependency.
+
+
+
 ---
 
 ### Getting Started
