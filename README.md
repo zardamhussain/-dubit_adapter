@@ -1,40 +1,67 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# Dubit Flutter Adapter Example
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+### Introduction
+The **Dubit Flutter Adapter** makes it easy to integrate Dubit video calls into your Flutter app. Here's a clean and functional example to get you started. Follow the steps below to implement the adapter in your project.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+---
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+### Getting Started
 
-## Features
+**1. Initialize the Adapter:**
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
-
-## Getting started
-
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+To start using the Dubit adapter, first, instantiate the `Dubit` object and set up an event listener to handle incoming events.
 
 ```dart
-const like = 'sample';
+final dubit = Dubit();
+
+dubit.onEvent.listen((event) {
+    print('Received event data: ${event.label} ${event.value}');
+});
 ```
 
-## Additional information
+---
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
-# -dubit_adapter
+**2. Join the call to listen the events:**
+
+Use the `start` method to begin a call by providing the `webCallUrl`. Replace the URL with your specific Dubit video call link.
+
+```dart
+dubit.start(
+    webCallUrl: 'https://trydubit.daily.co/${room_id}'
+);
+```
+
+---
+
+**3. Leave the Call:**
+
+When you're ready to stop listening the events, simply call the `stop` method.
+
+```dart
+dubit.stop();
+```
+
+---
+
+### Full Example Code
+
+Here's the complete implementation:
+
+```dart
+import 'package:dubit_flutter_adapter/dubit_flutter_adapter.dart';
+
+void main() {
+  final dubit = Dubit();
+
+  // Listen for events
+  dubit.onEvent.listen((event) {
+    print('Received event data: ${event.label} ${event.value}');
+  });
+
+  // Start the call
+  dubit.start(webCallUrl: 'https://trydubit.daily.co/${room_id}');
+
+  // Example: Stop the call (triggered by a button press or event)
+  // dubit.stop();
+}
+```
