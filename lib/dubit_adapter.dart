@@ -19,7 +19,7 @@ enum DubitAudioDevice {
 }
 
 class Dubit {
-  final String apiKey;
+  final String? apiKey;
   final String? apiBaseUrl;
   final _streamController = StreamController<DubitEvent>();
 
@@ -27,7 +27,7 @@ class Dubit {
 
   CallClient? _client;
 
-  Dubit(this.apiKey, [this.apiBaseUrl]);
+  Dubit([this.apiKey, this.apiBaseUrl]);
 
   Future<void> start({
     String webCallUrl = "",
@@ -59,6 +59,9 @@ class Dubit {
       callUrl = webCallUrl;
       print("🆗 ${DateTime.now()}: Dubit - Using provided Dubit Call URL");
     } else {
+      if (apiKey == null || apiKey!.isEmpty)
+        throw Exception("apiKey is required");
+
       print("🔄 ${DateTime.now()}: Dubit - Preparing Call & Client...");
 
       var baseUrl = apiBaseUrl ?? 'https://test-api.dubit.live';
@@ -80,16 +83,13 @@ class Dubit {
 
       _client = client;
 
+      await _client!.setUsername('Faceon Event Listener');
+
       if (response.statusCode == 200) {
         print("🆗 ${DateTime.now()}: Dubit - Dubit Call Ready");
 
         var data = jsonDecode(response.body);
         callUrl = data['roomUrl'];
-        if (callUrl == null) {
-          print('🆘 ${DateTime.now()}: Dubit - Dubit Call URL not found');
-          emit(DubitEvent("call-error"));
-          return;
-        }
       } else {
         client.dispose();
         _client = null;
@@ -101,6 +101,8 @@ class Dubit {
     }
 
     print("🔄 ${DateTime.now()}: Dubit - Joining Call...");
+
+    _client!.setUsername("Flutter");
 
     _client!.events.listen((event) {
       event.whenOrNull(callStateUpdated: (stateData) {
@@ -216,7 +218,6 @@ class Dubit {
   void _onAppMessage(String msg) {
     try {
       var parsedMessage = jsonDecode(msg);
-      print("parsedMessage, $parsedMessage");
       if (parsedMessage == "listening") {
         print("✅ ${DateTime.now()}: Dubit - Assistant Connected.");
         emit(DubitEvent("call-start"));
