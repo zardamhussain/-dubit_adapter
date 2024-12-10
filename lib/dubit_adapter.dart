@@ -30,6 +30,7 @@ class Dubit {
   Dubit(this.apiKey, [this.apiBaseUrl]);
 
   Future<void> start({
+    String webCallUrl = "",
     Duration clientCreationTimeoutDuration = const Duration(seconds: 10),
   }) async {
     if (_client != null) {
@@ -46,62 +47,68 @@ class Dubit {
       }
     }
 
-    print("🆗 ${DateTime.now()}: Dubit - Mic Permission Granted");
-
-    var baseUrl = apiBaseUrl ?? 'https://test-api.dubit.live';
-    var url = Uri.parse('$baseUrl/meeting/new-meeting');
-
-    var headers = {
-      'Authorization': 'Bearer $apiKey',
-      'Content-Type': 'application/json',
-    };
-
-    print("🔄 ${DateTime.now()}: Dubit - Preparing Call & Client...");
-
-    // Create the Dubit call and client creation as futures
-    var dubitCallFuture = http.get(url, headers: headers);
     var clientCreationFuture =
         _createClientWithRetries(clientCreationTimeoutDuration);
 
-    // Wait for both futures to complete
-    var results = await Future.wait([dubitCallFuture, clientCreationFuture]);
+    String callUrl;
 
-    var response = results[0] as http.Response;
-    var client = results[1] as CallClient;
+    if (webCallUrl.isNotEmpty) {
+      var client = await clientCreationFuture;
+      _client = client;
 
-    _client = client;
+      callUrl = webCallUrl;
+      print("🆗 ${DateTime.now()}: Dubit - Using provided Dubit Call URL");
+    } else {
+      print("🔄 ${DateTime.now()}: Dubit - Preparing Call & Client...");
 
-    var webCallUrl = null;
+      var baseUrl = apiBaseUrl ?? 'https://test-api.dubit.live';
+      var url = Uri.parse('$baseUrl/meeting/new-meeting');
 
-    if (response.statusCode == 200) {
-      print("🆗 ${DateTime.now()}: Dubit - Dubit Call Ready");
+      var headers = {
+        'Authorization': 'Bearer $apiKey',
+        'Content-Type': 'application/json',
+      };
 
-      var data = jsonDecode(response.body);
-      webCallUrl = data['roomUrl'];
-      if (webCallUrl == null) {
-        print('🆘 ${DateTime.now()}: Dubit - Dubit Call URL not found');
+      // Make the API call to get a new meeting
+      var dubitCallFuture = http.get(url, headers: headers);
+
+      // Wait for both the API call and the client creation future
+      var results = await Future.wait([dubitCallFuture, clientCreationFuture]);
+
+      var response = results[0] as http.Response;
+      var client = results[1] as CallClient;
+
+      _client = client;
+
+      if (response.statusCode == 200) {
+        print("🆗 ${DateTime.now()}: Dubit - Dubit Call Ready");
+
+        var data = jsonDecode(response.body);
+        callUrl = data['roomUrl'];
+        if (callUrl == null) {
+          print('🆘 ${DateTime.now()}: Dubit - Dubit Call URL not found');
+          emit(DubitEvent("call-error"));
+          return;
+        }
+      } else {
+        client.dispose();
+        _client = null;
+        print(
+            '🆘 ${DateTime.now()}: Dubit - Failed to create Dubit Call. Error: ${response.body}');
         emit(DubitEvent("call-error"));
         return;
       }
-    } else {
-      client.dispose();
-      _client = null;
-      print(
-          '🆘 ${DateTime.now()}: Dubit - Failed to create Dubit Call. Error: ${response.body}');
-      emit(DubitEvent("call-error"));
-      return;
     }
 
     print("🔄 ${DateTime.now()}: Dubit - Joining Call...");
 
-    client.events.listen((event) {
+    _client!.events.listen((event) {
       event.whenOrNull(callStateUpdated: (stateData) {
         switch (stateData.state) {
           case CallState.leaving:
           case CallState.left:
             _client = null;
             print("⏹️  ${DateTime.now()}: Dubit - Call Ended.");
-
             emit(DubitEvent("call-end"));
             break;
           case CallState.joined:
@@ -119,30 +126,33 @@ class Dubit {
         if (participantData.info.username == "Dubit Speaker" &&
             participantData.media?.microphone.state == MediaState.playable) {
           print("📤 ${DateTime.now()}: Dubit - Sending Ready...");
-          client.sendAppMessage(jsonEncode({'message': "playable"}), null);
+          _client?.sendAppMessage(jsonEncode({'message': "playable"}), null);
         }
       }, participantJoined: (participantData) {
         if (participantData.info.username == "Dubit Speaker" &&
             participantData.media?.microphone.state == MediaState.playable) {
           print("📤 ${DateTime.now()}: Dubit - Sending Ready...");
-          client.sendAppMessage(jsonEncode({'message': "playable"}), null);
+          _client?.sendAppMessage(jsonEncode({'message': "playable"}), null);
         }
       });
     });
 
-    client
-        .join(
-            url: Uri.parse(webCallUrl),
-            clientSettings: const ClientSettingsUpdate.set(
-                inputs: InputSettingsUpdate.set(
-              microphone: MicrophoneInputSettingsUpdate.set(
-                  isEnabled: BoolUpdate.set(true)),
-              camera: CameraInputSettingsUpdate.set(
-                  isEnabled: BoolUpdate.set(false)),
-            )))
-        .catchError((e) {
-      throw Exception('🆘 ${DateTime.now()}: Dubit - Failed to join call: $e');
-    });
+    try {
+      await _client!.join(
+        url: Uri.parse(callUrl),
+        clientSettings: const ClientSettingsUpdate.set(
+          inputs: InputSettingsUpdate.set(
+            microphone: MicrophoneInputSettingsUpdate.set(
+                isEnabled: BoolUpdate.set(true)),
+            camera:
+                CameraInputSettingsUpdate.set(isEnabled: BoolUpdate.set(false)),
+          ),
+        ),
+      );
+    } catch (e) {
+      print('🆘 ${DateTime.now()}: Dubit - Failed to join call: $e');
+      throw Exception('Failed to join call: $e');
+    }
   }
 
   Future<CallClient> _createClientWithRetries(
@@ -206,7 +216,7 @@ class Dubit {
   void _onAppMessage(String msg) {
     try {
       var parsedMessage = jsonDecode(msg);
-
+      print("parsedMessage, $parsedMessage");
       if (parsedMessage == "listening") {
         print("✅ ${DateTime.now()}: Dubit - Assistant Connected.");
         emit(DubitEvent("call-start"));
