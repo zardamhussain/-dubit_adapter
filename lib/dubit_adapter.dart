@@ -21,6 +21,7 @@ enum DubitAudioDevice {
 class Dubit {
   final String? apiKey;
   final String? apiBaseUrl;
+  bool isJoined = false;
   final _streamController = StreamController<DubitEvent>();
 
   Stream<DubitEvent> get onEvent => _streamController.stream;
@@ -28,6 +29,10 @@ class Dubit {
   CallClient? _client;
 
   Dubit([this.apiKey, this.apiBaseUrl]);
+
+  bool isJoinedUser() {
+    return isJoined;
+  }
 
   Future<void> start({
     String webCallUrl = "",
@@ -120,8 +125,16 @@ class Dubit {
             break;
         }
       }, participantLeft: (participantData) {
-        if (participantData.info.isLocal) return;
-        _client?.leave();
+        if (participantData.info.isLocal) {
+          isJoined = false;
+          _client?.leave();
+          return;
+        }
+        _onAppMessage(jsonEncode({
+          "type": "user-left",
+          "participant_id": participantData.id,
+          "username": participantData.info.username
+        }));
       }, appMessageReceived: (messageData, id) {
         _onAppMessage(messageData);
       }, participantUpdated: (participantData) {
@@ -136,6 +149,9 @@ class Dubit {
           print("📤 ${DateTime.now()}: Dubit - Sending Ready...");
           _client?.sendAppMessage(jsonEncode({'message': "playable"}), null);
         }
+        if (participantData.info.isLocal) {
+          isJoined = true;
+        }
       });
     });
 
@@ -145,7 +161,7 @@ class Dubit {
         clientSettings: const ClientSettingsUpdate.set(
           inputs: InputSettingsUpdate.set(
             microphone: MicrophoneInputSettingsUpdate.set(
-                isEnabled: BoolUpdate.set(true)),
+                isEnabled: BoolUpdate.set(false)),
             camera:
                 CameraInputSettingsUpdate.set(isEnabled: BoolUpdate.set(false)),
           ),
@@ -258,14 +274,14 @@ class Dubit {
   }
 
   void setDubitAudioDevice({required DubitAudioDevice device}) {
-    _client!.setAudioDevice(
-      deviceId: switch (device) {
-        DubitAudioDevice.speakerphone => DeviceId.speakerPhone,
-        DubitAudioDevice.wired => DeviceId.wired,
-        DubitAudioDevice.earpiece => DeviceId.earpiece,
-        DubitAudioDevice.bluetooth => DeviceId.bluetooth,
-      },
-    );
+    // _client!.setAudioDevice(
+    //   deviceId: switch (device) {
+    //     DubitAudioDevice.speakerphone => DeviceId.speakerPhone,
+    //     DubitAudioDevice.wired => DeviceId.wired,
+    //     DubitAudioDevice.earpiece => DeviceId.earpiece,
+    //     DubitAudioDevice.bluetooth => DeviceId.bluetooth,
+    //   },
+    // );
   }
 
   void emit(DubitEvent event) {
