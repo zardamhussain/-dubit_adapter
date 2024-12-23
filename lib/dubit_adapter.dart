@@ -167,6 +167,17 @@ class Dubit {
           ),
         ),
       );
+      _client!.setIsPublishing(camera: false,microphone: false);
+      const subscriptionProfile = SubscriptionProfile.base;
+      const mediaSubscriptionUpdateSettings = MediaSubscriptionSettingsUpdate.set(
+        camera: VideoSubscriptionSettingsUpdate.set(subscriptionState: SubscriptionStateUpdate.unsubscribed), 
+        screenVideo: VideoSubscriptionSettingsUpdate.set(subscriptionState: SubscriptionStateUpdate.unsubscribed), 
+        microphone: AudioSubscriptionSettingsUpdate.set(subscriptionState: SubscriptionStateUpdate.unsubscribed), 
+        screenAudio: AudioSubscriptionSettingsUpdate.set(subscriptionState: SubscriptionStateUpdate.unsubscribed), 
+      );
+      await _client!.updateSubscriptionProfiles(forProfiles: {
+        subscriptionProfile : mediaSubscriptionUpdateSettings
+      });
     } catch (e) {
       print('🆘 ${DateTime.now()}: Dubit - Failed to join call: $e');
       throw Exception('Failed to join call: $e');
