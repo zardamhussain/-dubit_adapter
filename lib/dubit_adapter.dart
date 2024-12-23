@@ -145,7 +145,7 @@ class Dubit {
         clientSettings: const ClientSettingsUpdate.set(
           inputs: InputSettingsUpdate.set(
             microphone: MicrophoneInputSettingsUpdate.set(
-                isEnabled: BoolUpdate.set(true)),
+                isEnabled: BoolUpdate.set(false)),
             camera:
                 CameraInputSettingsUpdate.set(isEnabled: BoolUpdate.set(false)),
           ),
@@ -258,14 +258,14 @@ class Dubit {
   }
 
   void setDubitAudioDevice({required DubitAudioDevice device}) {
-    _client!.setAudioDevice(
-      deviceId: switch (device) {
-        DubitAudioDevice.speakerphone => DeviceId.speakerPhone,
-        DubitAudioDevice.wired => DeviceId.wired,
-        DubitAudioDevice.earpiece => DeviceId.earpiece,
-        DubitAudioDevice.bluetooth => DeviceId.bluetooth,
-      },
-    );
+    // _client!.setAudioDevice(
+    //   deviceId: switch (device) {
+    //     DubitAudioDevice.speakerphone => DeviceId.speakerPhone,
+    //     DubitAudioDevice.wired => DeviceId.wired,
+    //     DubitAudioDevice.earpiece => DeviceId.earpiece,
+    //     DubitAudioDevice.bluetooth => DeviceId.bluetooth,
+    //   },
+    // );
   }
 
   void emit(DubitEvent event) {
